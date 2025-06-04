@@ -10,9 +10,22 @@
 		DC91C6092DDF5AEC008BF24F /* OrderingAssistant.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = OrderingAssistant.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		DC4682882DF05D40002D12B3 /* Exceptions for "OrderingAssistant" folder in "OrderingAssistant" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = DC91C6082DDF5AEC008BF24F /* OrderingAssistant */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		DC91C60B2DDF5AEC008BF24F /* OrderingAssistant */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				DC4682882DF05D40002D12B3 /* Exceptions for "OrderingAssistant" folder in "OrderingAssistant" target */,
+			);
 			path = OrderingAssistant;
 			sourceTree = "<group>";
 		};
@@ -254,6 +267,7 @@
 				DEVELOPMENT_ASSET_PATHS = "\"OrderingAssistant/Preview Content\"";
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = OrderingAssistant/Info.plist;
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Need microphone access to listen for products.";
 				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "Allow speech recognition to identify products.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -284,6 +298,7 @@
 				DEVELOPMENT_ASSET_PATHS = "\"OrderingAssistant/Preview Content\"";
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = OrderingAssistant/Info.plist;
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Need microphone access to listen for products.";
 				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "Allow speech recognition to identify products.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
