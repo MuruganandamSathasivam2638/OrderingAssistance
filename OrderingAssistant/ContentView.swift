@@ -214,12 +214,10 @@ struct VoiceInputView: View {
                     .padding()
                 }  else if detectedProducts.isEmpty {
                     Spacer()
-                    Text("Say something delicious, \nand I’ll handle the rest!")
-                        .multilineTextAlignment(.center).foregroundColor(.secondary)
+                    Text("Say something delicious...").foregroundColor(.secondary)
                     Spacer()
                 } else if !isListening && !isProcessing {
-                    Text("No products detected.")
-                        .foregroundColor(.secondary)
+                    Text("No products detected.").foregroundColor(.secondary)
                 }
 
                 Spacer()
@@ -255,45 +253,56 @@ struct VoiceInputView: View {
                 }
                 
             }
+            .onChange(of: isProcessing) {
+                if !isProcessing {
+                    cartProducts.append(contentsOf: detectedProducts)
+                    if(!detectedProducts.isEmpty){
+                        announceProducts()
+                    }else{
+                        announce(announcementText: "No Products detected, Please try again!")
+                    }
+                }
+            }
             .padding()
             .onAppear(perform: startListening)
-            .onDisappear(perform: stopListening)
             .navigationTitle("Voice Order")
             .navigationBarHidden(true)
         }
     }
     
-    private func announceProducts(){
-        let pauser = "."
-        if(!detectedProducts.isEmpty){
-            var announcementText = PRODUCT_ADDED_TO_CART + pauser
-            detectedProducts.forEach { product in
-                print("product \(product.name)")
-                let quantityString = String(product.quantity ?? 0)
-                announcementText += quantityString + pauser + product.name
-                if(!product.modifiers.isEmpty){
-                    announcementText += PRODUCT_WITH_MODIFIERS
-                    product.modifiers.forEach{ modifier in
-                        announcementText += modifier + pauser
-                    }
-                    announcementText += pauser
-                }
+    private func announceProducts() {
+        guard !detectedProducts.isEmpty else { return }
+
+        var announcementText = PRODUCT_ADDED_TO_CART + " "
+        
+        for product in detectedProducts {
+            let quantity = product.quantity ?? 1
+            announcementText += "\(quantity) quantity of \(product.name)"
+            
+            if !product.modifiers.isEmpty {
+                let modifierText = product.modifiers.joined(separator: ", ")
+                announcementText += " \(PRODUCT_WITH_MODIFIERS) \(modifierText)"
             }
-            announcementText += pauser + ADD_MORE_PRODUCTS
-            isAnnouncing = true
-            announce(announcementText: announcementText)
+            
+            announcementText += ". "  // Add pause between products
         }
+        
+        announcementText += ADD_MORE_PRODUCTS
+        isAnnouncing = true
+        announce(announcementText: announcementText)
     }
-    
+
     private func announce(announcementText: String){
         let utterance = AVSpeechUtterance(string: announcementText)
-                        utterance.rate = 0.5
-                        utterance.voice = AVSpeechSynthesisVoice(language: "en-US")
-                        synthesizer.delegate = delegate
-                        delegate.onFinish = {
-                            isAnnouncing = false
-                        }
-                        synthesizer.speak(utterance)
+        utterance.rate = 0.3
+        utterance.voice = AVSpeechSynthesisVoice(language: "en-US")
+        synthesizer.delegate = delegate
+        delegate.onFinish = {
+            isAnnouncing = false
+            detectedProducts = []
+            userInput = ""
+        }
+        synthesizer.speak(utterance)
     }
 
     // MARK: - Views
@@ -341,7 +350,7 @@ struct VoiceInputView: View {
                 let inputNode = audioEngine.inputNode
                 let recordingFormat = inputNode.outputFormat(forBus: 0)
 
-                inputNode.installTap(onBus: 0, bufferSize: 1024, format: recordingFormat) { buffer, _ in
+                inputNode.installTap(onBus: 0, bufferSize: 10000, format: recordingFormat) { buffer, _ in
                     request.append(buffer)
                 }
 
@@ -352,18 +361,14 @@ struct VoiceInputView: View {
                     if let result = result {
                         userInput = result.bestTranscription.formattedString
                     }
-                    if error != nil || result?.isFinal == true {
-                        stopListening()
-                    }
                 }
 
-                DispatchQueue.main.asyncAfter(deadline: .now() + 8) {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 10) {
                     stopListening()
                 }
 
             } catch {
                 print("Speech setup failed: \(error)")
-                stopListening()
             }
         }
     }
@@ -428,17 +433,12 @@ struct VoiceInputView: View {
                     return Product(name: intent.product, modifiers: intent.modifiers, quantity: intent.quantity ?? 1)
                 }
             }
-            cartProducts.append(contentsOf: detectedProducts)
-            if(!detectedProducts.isEmpty){
-                announceProducts()
-            }else{
-                announce(announcementText: "No Products detected, Please try again!")
-            }
+            isProcessing = false
         } catch {
             print("OpenAI error: \(error)")
+            isProcessing = false
+            announce(announcementText: "Sorry, I couldn't understand. Please try again.")
         }
-
-        isProcessing = false
     }
 
     func callOpenAI(with prompt: String) async throws -> String {
