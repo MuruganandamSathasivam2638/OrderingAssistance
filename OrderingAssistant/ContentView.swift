@@ -55,6 +55,9 @@ struct ProductRepository {
         Product(name: "Zucchini Pesto", modifiers: ["no cheese", "add grilled chicken", "extra pesto"], quantity: 10),
         Product(name: "Buffalo Chicken Mac", modifiers: ["extra buffalo sauce", "add bacon", "no blue cheese"], quantity: 10)
     ]
+    
+    var detectedProducts: [Product]
+
 }
 
 // MARK: - ContentView
@@ -62,6 +65,7 @@ struct ProductRepository {
 struct ContentView: View {
     @State private var isVoiceInputPresented = false
     let allProducts = ProductRepository.products
+    @State var cartProducts: [Product]
 
     var body: some View {
         NavigationView {
@@ -107,11 +111,34 @@ struct ContentView: View {
                     }
                 }
             }
+            .navigationBarItems(trailing: NavigationLink(destination: CartView(cartProducts: $cartProducts)) {
+                    Text("Cart (\(cartProducts.count))")
+                }
+            )
             .navigationTitle("Menu")
             .sheet(isPresented: $isVoiceInputPresented) {
-                VoiceInputView(isPresented: $isVoiceInputPresented)
+                VoiceInputView(isPresented: $isVoiceInputPresented, cartProducts: $cartProducts)
             }
         }
+    }
+}
+
+// MARK: - Cart Screen
+struct CartView: View {
+    @Binding var cartProducts: [Product]
+
+    var body: some View {
+        List {
+            ForEach(cartProducts) { product in
+                VStack(alignment: .leading) {
+                    Text(product.name).bold()
+                    Text("Modifiers: \(product.modifiers.joined(separator: ", "))")
+                        .font(.subheadline)
+                        .foregroundColor(.gray)
+                }
+            }
+        }
+        .navigationTitle("Your Cart")
     }
 }
 
@@ -125,6 +152,8 @@ struct VoiceInputView: View {
     @State private var isProcessing = false
     @State private var micPulse = false
     @State private var brainPulse = false
+
+    @Binding var cartProducts: [Product]
 
     private let audioEngine = AVAudioEngine()
     private let speechRecognizer = SFSpeechRecognizer()
@@ -349,6 +378,7 @@ struct VoiceInputView: View {
                     return Product(name: intent.product, modifiers: intent.modifiers, quantity: intent.quantity ?? 1)
                 }
             }
+            cartProducts.append(contentsOf: detectedProducts)
         } catch {
             print("OpenAI error: \(error)")
         }
