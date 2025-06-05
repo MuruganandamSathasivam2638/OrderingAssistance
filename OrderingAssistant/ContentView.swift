@@ -21,6 +21,15 @@ struct OrderIntent: Decodable {
     let products: [ProductIntent]
 }
 
+class SpeechDelegate: NSObject, AVSpeechSynthesizerDelegate {
+    var onFinish: (() -> Void)?
+
+    func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didFinish utterance: AVSpeechUtterance) {
+        print("🗣️ Finished speaking: \(utterance.speechString)")
+        onFinish?()
+    }
+}
+
 struct GradientBackgroundView: View {
     var body: some View {
         LinearGradient(
@@ -152,13 +161,19 @@ struct VoiceInputView: View {
     @State private var isProcessing = false
     @State private var micPulse = false
     @State private var brainPulse = false
+    @State private var isAnnouncing = false
 
     @Binding var cartProducts: [Product]
 
     private let audioEngine = AVAudioEngine()
     private let speechRecognizer = SFSpeechRecognizer()
     private let audioSession = AVAudioSession.sharedInstance()
+    private let PRODUCT_ADDED_TO_CART = "Product added to cart:"
+    private let PRODUCT_WITH_MODIFIERS = "with: "
+    private let ADD_MORE_PRODUCTS = "Do you want to add more products? Tap the microphone to continue."
     @State private var recognitionTask: SFSpeechRecognitionTask?
+    let synthesizer = AVSpeechSynthesizer()
+    let delegate = SpeechDelegate()
 
     let allProducts = ProductRepository.products
 
@@ -171,7 +186,7 @@ struct VoiceInputView: View {
                             isPresented = false
                         }){
                             Image(systemName: "xmark")
-                                .foregroundColor(Color.white)
+                                .foregroundColor(Color.black)
                                 .padding()
                                 .clipShape(Circle())
                                 .shadow(radius: 2)
@@ -224,6 +239,8 @@ struct VoiceInputView: View {
                 } else if isProcessing {
                     LottieView(animationName: "processing").frame(width: 150, height: 150)
                     //statusView(label: "Processing...", icon: "cpu.fill", color: .green, pulse: brainPulse)
+                } else if isAnnouncing {
+                    LottieView(animationName: "announcing").frame(width: 150, height: 150)
                 } else {
                     Button(action: {
                         startListening()
@@ -244,6 +261,39 @@ struct VoiceInputView: View {
             .navigationTitle("Voice Order")
             .navigationBarHidden(true)
         }
+    }
+    
+    private func announceProducts(){
+        let pauser = "."
+        if(!detectedProducts.isEmpty){
+            var announcementText = PRODUCT_ADDED_TO_CART + pauser
+            detectedProducts.forEach { product in
+                print("product \(product.name)")
+                let quantityString = String(product.quantity ?? 0)
+                announcementText += quantityString + pauser + product.name
+                if(!product.modifiers.isEmpty){
+                    announcementText += PRODUCT_WITH_MODIFIERS
+                    product.modifiers.forEach{ modifier in
+                        announcementText += modifier + pauser
+                    }
+                    announcementText += pauser
+                }
+            }
+            announcementText += pauser + ADD_MORE_PRODUCTS
+            isAnnouncing = true
+            announce(announcementText: announcementText)
+        }
+    }
+    
+    private func announce(announcementText: String){
+        let utterance = AVSpeechUtterance(string: announcementText)
+                        utterance.rate = 0.5
+                        utterance.voice = AVSpeechSynthesisVoice(language: "en-US")
+                        synthesizer.delegate = delegate
+                        delegate.onFinish = {
+                            isAnnouncing = false
+                        }
+                        synthesizer.speak(utterance)
     }
 
     // MARK: - Views
@@ -379,6 +429,11 @@ struct VoiceInputView: View {
                 }
             }
             cartProducts.append(contentsOf: detectedProducts)
+            if(!detectedProducts.isEmpty){
+                announceProducts()
+            }else{
+                announce(announcementText: "No Products detected, Please try again!")
+            }
         } catch {
             print("OpenAI error: \(error)")
         }
