@@ -238,7 +238,7 @@ struct VoiceInputView: View {
                     LottieView(animationName: "processing").frame(width: 150, height: 150)
                     //statusView(label: "Processing...", icon: "cpu.fill", color: .green, pulse: brainPulse)
                 } else if isAnnouncing {
-                    LottieView(animationName: "announcing").frame(width: 150, height: 150)
+                    LottieView(animationName: "announcing").frame(width: 100, height: 100)
                 } else {
                     Button(action: {
                         startListening()
@@ -350,7 +350,7 @@ struct VoiceInputView: View {
                 let inputNode = audioEngine.inputNode
                 let recordingFormat = inputNode.outputFormat(forBus: 0)
 
-                inputNode.installTap(onBus: 0, bufferSize: 10000, format: recordingFormat) { buffer, _ in
+                inputNode.installTap(onBus: 0, bufferSize: 15000, format: recordingFormat) { buffer, _ in
                     request.append(buffer)
                 }
 
@@ -363,7 +363,7 @@ struct VoiceInputView: View {
                     }
                 }
 
-                DispatchQueue.main.asyncAfter(deadline: .now() + 10) {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 15) {
                     stopListening()
                 }
 
@@ -426,11 +426,12 @@ struct VoiceInputView: View {
             let response = try await callOpenAI(with: prompt)
             let decoded = try JSONDecoder().decode(OrderIntent.self, from: Data(response.utf8))
 
+            // Filter only recognized products
             detectedProducts = decoded.products.compactMap { intent in
                 if let match = allProducts.first(where: { $0.name.lowercased() == intent.product.lowercased() }) {
                     return Product(name: match.name, modifiers: intent.modifiers, quantity: intent.quantity ?? 1)
                 } else {
-                    return Product(name: intent.product, modifiers: intent.modifiers, quantity: intent.quantity ?? 1)
+                    return nil // Ignore unrecognized products
                 }
             }
             isProcessing = false
