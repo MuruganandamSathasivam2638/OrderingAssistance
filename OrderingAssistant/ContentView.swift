@@ -21,6 +21,28 @@ struct OrderIntent: Decodable {
     let products: [ProductIntent]
 }
 
+struct GradientBackgroundView: View {
+    var body: some View {
+        LinearGradient(
+            gradient: Gradient(colors: [
+                Color(red: 7/255, green: 9/255, blue: 81/255),   // Dark Blue Top-Left
+                Color(red: 11/255, green: 30/255, blue: 129/255), // Mid Blue
+                Color(red: 25/255, green: 50/255, blue: 144/255), // Bright Blue
+                Color(red: 40/255, green: 45/255, blue: 120/255)  // Deep Purple Bottom-Right
+            ]),
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
+        .ignoresSafeArea()
+    }
+}
+
+struct GradientBackgroundView_Previews: PreviewProvider {
+    static var previews: some View {
+        GradientBackgroundView()
+    }
+}
+
 // MARK: - Repository
 
 struct ProductRepository {
@@ -77,7 +99,7 @@ struct ContentView: View {
                             Image(systemName: "mic.fill")
                                 .foregroundColor(.white)
                                 .padding()
-                                .background(Color.blue)
+                                .background(Color.darkBlue)
                                 .clipShape(Circle())
                                 .shadow(radius: 4)
                         }
@@ -114,19 +136,20 @@ struct VoiceInputView: View {
     var body: some View {
         NavigationView {
             VStack(spacing: 24) {
-                if isListening {
-                    statusView(label: "Listening...", icon: "mic.fill", color: .blue, pulse: micPulse)
-                } else if isProcessing {
-                    statusView(label: "Processing...", icon: "cpu.fill", color: .green, pulse: brainPulse)
+                HStack {
+                    Spacer()
+                    Button(action: {
+                            isPresented = false
+                        }){
+                            Image(systemName: "xmark")
+                                .foregroundColor(Color.white)
+                                .padding()
+                                .clipShape(Circle())
+                                .shadow(radius: 2)
+                        }
                 }
-
-                if !userInput.isEmpty {
-                    Text(userInput)
-                        .font(.body)
-                        .padding(.horizontal)
-                        .multilineTextAlignment(.center)
-                }
-
+                
+                
                 if !detectedProducts.isEmpty {
                     Divider()
                     VStack(alignment: .leading, spacing: 16) {
@@ -145,17 +168,46 @@ struct VoiceInputView: View {
                         }
                     }
                     .padding()
+                }  else if detectedProducts.isEmpty {
+                    Spacer()
+                    Text("Say something delicious, \nand I’ll handle the rest!")
+                        .multilineTextAlignment(.center).foregroundColor(.secondary)
+                    Spacer()
                 } else if !isListening && !isProcessing {
                     Text("No products detected.")
                         .foregroundColor(.secondary)
                 }
 
                 Spacer()
-
-                Button("Close") {
-                    isPresented = false
+                
+                if !userInput.isEmpty {
+                    Text(userInput)
+                        .font(.body)
+                        .italic()
+                        .padding(.horizontal)
+                        .multilineTextAlignment(.center)
                 }
-                .padding(.bottom)
+                
+                if isListening {
+                    LottieView(animationName: "listening")
+                                    .frame(width: 200, height: 200)
+                    //statusView(label: "Listening...", icon: "mic.fill", color: .blue, pulse: micPulse)
+                } else if isProcessing {
+                    LottieView(animationName: "processing").frame(width: 150, height: 150)
+                    //statusView(label: "Processing...", icon: "cpu.fill", color: .green, pulse: brainPulse)
+                } else {
+                    Button(action: {
+                        startListening()
+                    }) {
+                        Image(systemName: "mic.fill")
+                            .foregroundColor(.white)
+                            .padding()
+                            .background(Color.darkBlue)
+                            .clipShape(Circle())
+                            .shadow(radius: 6)
+                    }
+                }
+                
             }
             .padding()
             .onAppear(perform: startListening)
