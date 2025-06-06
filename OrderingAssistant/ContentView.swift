@@ -453,7 +453,6 @@ struct VoiceInputView: View {
         isProcessing = true
         let inputText = userInput
         userInput = "Almost there! \nPreparing your favorite bite in the queue..."
-        announce(announcementText: "Almost there! \nPreparing your favorite bite in the queue...")
         startPulse(for: .brain)
 
         Task {
