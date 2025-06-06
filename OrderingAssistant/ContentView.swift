@@ -258,7 +258,7 @@ struct VoiceInputView: View {
                 if !detectedProducts.isEmpty {
                     Divider()
                     VStack(alignment: .leading, spacing: 16) {
-                        Text("🛒 Detected Products")
+                        Text("🛒 Matched Products")
                             .font(.headline)
 
                         ForEach(detectedProducts) { product in
@@ -282,7 +282,7 @@ struct VoiceInputView: View {
                     Text("Almost there! \nPreparing your favorite bite in the queue...").foregroundColor(.secondary)
                     Spacer()
                 } else if !isListening && !isProcessing {
-                    Text("No Products detected, Please try again!").foregroundColor(.secondary)
+                    Text("No products matched, Please try again!").foregroundColor(.secondary)
                 }
 
                 Spacer()
@@ -321,7 +321,7 @@ struct VoiceInputView: View {
                     if(!detectedProducts.isEmpty){
                         announceProducts()
                     } else {
-                        announce(announcementText: "No Products detected, Please try again!")
+                        announce(announcementText: "No products matched, Please try again!")
                     }
                 }
             }
