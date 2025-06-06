@@ -30,6 +30,40 @@ class SpeechDelegate: NSObject, AVSpeechSynthesizerDelegate {
     }
 }
 
+class SpeechManager: NSObject, ObservableObject, AVSpeechSynthesizerDelegate {
+    let synthesizer = AVSpeechSynthesizer()
+    var onFinish: (() -> Void)?
+    override init() {
+        super.init()
+        synthesizer.delegate = self // Important for monitoring speech status
+    }
+
+    func speak(text: String) {
+        let utterance = AVSpeechUtterance(string: text)
+        utterance.voice = AVSpeechSynthesisVoice(language: "en-US") // Optional: set voice
+        synthesizer.speak(utterance)
+    }
+
+    func stop() {
+        if synthesizer.isSpeaking {
+            synthesizer.stopSpeaking(at: .immediate)
+            print("Speech stopped immediately.")
+        } else {
+            print("Synthesizer is not speaking.")
+        }
+    }
+
+    // MARK: - AVSpeechSynthesizerDelegate (Optional but recommended for debugging)
+    func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didFinish utterance: AVSpeechUtterance) {
+        print("Speech finished: \(utterance.speechString)")
+        onFinish?()
+    }
+
+    func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didCancel utterance: AVSpeechUtterance) {
+        print("Speech cancelled: \(utterance.speechString)")
+    }
+}
+
 struct GradientBackgroundView: View {
     var body: some View {
         LinearGradient(
@@ -75,79 +109,129 @@ struct ContentView: View {
     @State private var isVoiceInputPresented = false
     let allProducts = ProductRepository.products
     @State var cartProducts: [Product]
+    @State private var activeView: ActiveView = .none
+    enum ActiveView {
+        case none
+        case cart
+        case voice
+    }
 
     var body: some View {
-        NavigationView {
-            ZStack {
-                ScrollView {
-                    VStack(spacing: 16) {
-                        ForEach(allProducts) { product in
-                            HStack(alignment: .top, spacing: 12) {
-                                VStack(alignment: .leading, spacing: 8) {
-                                    Text(product.name)
-                                        .font(.headline)
+            NavigationView {
+                ZStack {
+                    ScrollView {
+                        VStack(spacing: 16) {
+                            ForEach(allProducts) { product in
+                                HStack(alignment: .top, spacing: 12) {
+                                    VStack(alignment: .leading, spacing: 8) {
+                                        Text(product.name)
+                                            .font(.headline)
 
-                                    Text("Modifiers: \(product.modifiers.joined(separator: ", "))")
-                                        .font(.subheadline)
-                                        .foregroundColor(.gray)
+                                        Text("Modifiers: \(product.modifiers.joined(separator: ", "))")
+                                            .font(.subheadline)
+                                            .foregroundColor(.gray)
+                                    }
+                                    Spacer()
                                 }
-                                Spacer()
-                            }
-                            .padding()
-                            .background(Color(.systemGray6))
-                            .cornerRadius(16)
-                            .shadow(radius: 2)
-                        }
-                    }
-                    .padding()
-                }
-
-                VStack {
-                    Spacer()
-                    HStack {
-                        Spacer()
-                        Button(action: {
-                            isVoiceInputPresented = true
-                        }) {
-                            Image(systemName: "mic.fill")
-                                .foregroundColor(.white)
                                 .padding()
-                                .background(Color.darkBlue)
-                                .clipShape(Circle())
-                                .shadow(radius: 4)
+                                .background(Color(.systemGray6))
+                                .cornerRadius(16)
+                                .shadow(radius: 2)
+                            }
                         }
                         .padding()
                     }
+
+                    VStack {
+                        Spacer()
+                        HStack {
+                            Spacer()
+                            Button(action: {
+                                activeView = .voice
+                                isVoiceInputPresented = true
+                            }) {
+                                Image(systemName: "mic.fill")
+                                    .foregroundColor(.white)
+                                    .padding()
+                                    .background(Color.darkBlue)
+                                    .clipShape(Circle())
+                                    .shadow(radius: 4)
+                            }
+                            .padding()
+                        }
+                    }
                 }
-            }
-            .navigationBarItems(trailing: NavigationLink(destination: CartView(cartProducts: $cartProducts)) {
-                    Text("Cart (\(cartProducts.count))")
+                .navigationBarItems(trailing:
+                    Button(action: {
+                        activeView = .cart
+                    }) {
+                        Text("Cart (\(cartProducts.count))")
+                    }
+                )
+                .navigationTitle("Menu")
+                .background(
+                    NavigationLink(
+                        destination: CartView(cartProducts: $cartProducts, openVoice: {
+                            activeView = .voice
+                            isVoiceInputPresented = true
+                        }),
+                        isActive: Binding(
+                            get: { activeView == .cart },
+                            set: { if !$0 { activeView = .none } }
+                        )
+                    ) { EmptyView() }
+                )
+                .sheet(isPresented: $isVoiceInputPresented) {
+                    VoiceInputView(
+                        isPresented: $isVoiceInputPresented,
+                        cartProducts: $cartProducts,
+                        openCart: {
+                            activeView = .cart
+                            isVoiceInputPresented = false
+                        }
+                    )
                 }
-            )
-            .navigationTitle("Menu")
-            .sheet(isPresented: $isVoiceInputPresented) {
-                VoiceInputView(isPresented: $isVoiceInputPresented, cartProducts: $cartProducts)
             }
         }
-    }
 }
 
 // MARK: - Cart Screen
 struct CartView: View {
     @Binding var cartProducts: [Product]
-
+    let openVoice: () -> Void
     var body: some View {
-        List {
-            ForEach(cartProducts) { product in
-                VStack(alignment: .leading) {
-                    Text(product.name).bold()
-                    Text("Modifiers: \(product.modifiers.joined(separator: ", "))")
-                        .font(.subheadline)
-                        .foregroundColor(.gray)
+        VStack{
+            List {
+                ForEach(cartProducts) { product in
+                    VStack(alignment: .leading) {
+                        Text(product.name).bold()
+                        if(!product.modifiers.isEmpty){
+                            Text("Modifiers: \(product.modifiers.joined(separator: ", "))")
+                                .font(.subheadline)
+                                .foregroundColor(.gray)
+                        }
+                    }
                 }
             }
+            .navigationTitle("Your Cart")
+            VStack {
+                Spacer()
+                HStack {
+                    Spacer()
+                    Button(action: {
+                        openVoice()
+                    }) {
+                        Image(systemName: "mic.fill")
+                            .foregroundColor(.white)
+                            .padding()
+                            .background(Color.darkBlue)
+                            .clipShape(Circle())
+                            .shadow(radius: 4)
+                    }
+                    .padding()
+                }
+            }.background(Color(UIColor.systemGroupedBackground))
         }
-        .navigationTitle("Your Cart")
     }
 }
 
@@ -172,17 +256,16 @@ struct VoiceInputView: View {
     private let PRODUCT_WITH_MODIFIERS = "with: "
     private let ADD_MORE_PRODUCTS = "Do you want to add more products? Tap the microphone to continue."
     @State private var recognitionTask: SFSpeechRecognitionTask?
-    let synthesizer = AVSpeechSynthesizer()
-    let delegate = SpeechDelegate()
-
+    @StateObject private var speechManager = SpeechManager()
     let allProducts = ProductRepository.products
-
+    let openCart: () -> Void
     var body: some View {
         NavigationView {
             VStack(spacing: 24) {
                 HStack {
                     Spacer()
                     Button(action: {
+                            stopAnnouncement()
                             isPresented = false
                         }){
                             Image(systemName: "xmark")
@@ -212,7 +295,7 @@ struct VoiceInputView: View {
                         }
                     }
                     .padding()
-                }  else if detectedProducts.isEmpty {
+                }  else if isListening {
                     Spacer()
                     Text("Say something delicious...").foregroundColor(.secondary)
                     Spacer()
@@ -267,7 +350,15 @@ struct VoiceInputView: View {
             .onAppear(perform: startListening)
             .navigationTitle("Voice Order")
             .navigationBarHidden(true)
+            .onDisappear(perform: onClose)
         }
+    }
+    
+    private func onClose() {
+        if(isListening){
+            stopListening()
+        }
+        stopAnnouncement()
     }
     
     private func announceProducts() {
@@ -286,23 +377,24 @@ struct VoiceInputView: View {
             
             announcementText += ". "  // Add pause between products
         }
-        
         announcementText += ADD_MORE_PRODUCTS
-        isAnnouncing = true
         announce(announcementText: announcementText)
     }
 
     private func announce(announcementText: String){
-        let utterance = AVSpeechUtterance(string: announcementText)
-        utterance.rate = 0.3
-        utterance.voice = AVSpeechSynthesisVoice(language: "en-US")
-        synthesizer.delegate = delegate
-        delegate.onFinish = {
+        isAnnouncing = true
+        speechManager.speak(text: announcementText)
+        speechManager.synthesizer.delegate = speechManager
+        speechManager.onFinish = {
             isAnnouncing = false
-            detectedProducts = []
             userInput = ""
+            //Redirect to cart screen
+            if(!detectedProducts.isEmpty) {
+                stopAnnouncement()
+                isPresented = false
+                openCart()
+            }
         }
-        synthesizer.speak(utterance)
     }
 
     // MARK: - Views
@@ -331,6 +423,7 @@ struct VoiceInputView: View {
     // MARK: - Speech Recognition
 
     func startListening() {
+        stopAnnouncement()
         isListening = true
         startPulse(for: .mic)
 
@@ -379,11 +472,18 @@ struct VoiceInputView: View {
         recognitionTask?.cancel()
         isListening = false
         isProcessing = true
+        let inputText = userInput
+        userInput = "Almost there! \nPreparing your favorite bite in the queue..."
         startPulse(for: .brain)
 
         Task {
-            await processInput(userInput)
+            await processInput(inputText)
         }
+    }
+    
+    private func stopAnnouncement() {
+        isAnnouncing = false
+        speechManager.stop()
     }
 
     enum PulseType { case mic, brain }
@@ -425,7 +525,7 @@ struct VoiceInputView: View {
         do {
             let response = try await callOpenAI(with: prompt)
             let decoded = try JSONDecoder().decode(OrderIntent.self, from: Data(response.utf8))
-
+            print("decoded.products: \(decoded.products)")
             // Filter only recognized products
             detectedProducts = decoded.products.compactMap { intent in
                 if let match = allProducts.first(where: { $0.name.lowercased() == intent.product.lowercased() }) {
