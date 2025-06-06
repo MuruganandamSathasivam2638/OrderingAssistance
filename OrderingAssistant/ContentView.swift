@@ -188,6 +188,7 @@ struct CartView: View {
                                 .font(.subheadline)
                                 .foregroundColor(.gray)
                         }
+                        Text("Quantity: \(product.quantity ?? 1)").font(.subheadline)
                     }
                 }
             }
