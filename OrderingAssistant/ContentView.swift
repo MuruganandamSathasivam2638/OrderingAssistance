@@ -64,28 +64,6 @@ class SpeechManager: NSObject, ObservableObject, AVSpeechSynthesizerDelegate {
     }
 }
 
-struct GradientBackgroundView: View {
-    var body: some View {
-        LinearGradient(
-            gradient: Gradient(colors: [
-                Color(red: 7/255, green: 9/255, blue: 81/255),   // Dark Blue Top-Left
-                Color(red: 11/255, green: 30/255, blue: 129/255), // Mid Blue
-                Color(red: 25/255, green: 50/255, blue: 144/255), // Bright Blue
-                Color(red: 40/255, green: 45/255, blue: 120/255)  // Deep Purple Bottom-Right
-            ]),
-            startPoint: .topLeading,
-            endPoint: .bottomTrailing
-        )
-        .ignoresSafeArea()
-    }
-}
-
-struct GradientBackgroundView_Previews: PreviewProvider {
-    static var previews: some View {
-        GradientBackgroundView()
-    }
-}
-
 // MARK: - Repository
 
 struct ProductRepository {
