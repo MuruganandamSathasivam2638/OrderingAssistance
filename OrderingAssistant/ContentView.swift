@@ -277,8 +277,12 @@ struct VoiceInputView: View {
                     Spacer()
                     Text("Say something delicious...").foregroundColor(.secondary)
                     Spacer()
+                }  else if isProcessing {
+                    Spacer()
+                    Text("Almost there! \nPreparing your favorite bite in the queue...").foregroundColor(.secondary)
+                    Spacer()
                 } else if !isListening && !isProcessing {
-                    Text("No products detected.").foregroundColor(.secondary)
+                    Text("No Products detected, Please try again!").foregroundColor(.secondary)
                 }
 
                 Spacer()
@@ -292,12 +296,9 @@ struct VoiceInputView: View {
                 }
                 
                 if isListening {
-                    LottieView(animationName: "listening")
-                                    .frame(width: 200, height: 200)
-                    //statusView(label: "Listening...", icon: "mic.fill", color: .blue, pulse: micPulse)
+                    LottieView(animationName: "listening").frame(width: 200, height: 200)
                 } else if isProcessing {
                     LottieView(animationName: "processing").frame(width: 150, height: 150)
-                    //statusView(label: "Processing...", icon: "cpu.fill", color: .green, pulse: brainPulse)
                 } else if isAnnouncing {
                     LottieView(animationName: "announcing").frame(width: 100, height: 100)
                 } else {
@@ -319,7 +320,7 @@ struct VoiceInputView: View {
                     cartProducts.append(contentsOf: detectedProducts)
                     if(!detectedProducts.isEmpty){
                         announceProducts()
-                    }else{
+                    } else {
                         announce(announcementText: "No Products detected, Please try again!")
                     }
                 }
@@ -452,6 +453,7 @@ struct VoiceInputView: View {
         isProcessing = true
         let inputText = userInput
         userInput = "Almost there! \nPreparing your favorite bite in the queue..."
+        announce(announcementText: "Almost there! \nPreparing your favorite bite in the queue...")
         startPulse(for: .brain)
 
         Task {
@@ -516,7 +518,6 @@ struct VoiceInputView: View {
         } catch {
             print("OpenAI error: \(error)")
             isProcessing = false
-            announce(announcementText: "Sorry, I couldn't understand. Please try again.")
         }
     }
 
